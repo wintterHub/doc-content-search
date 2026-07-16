@@ -1,0 +1,22 @@
+# Python cache and virtual environment
+__pycache__/
+*.py[cod]
+.venv/
+
+# Build outputs
+build/
+dist/
+*.spec.bak
+
+# Local runtime data
+*.log
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
