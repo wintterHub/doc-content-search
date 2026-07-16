@@ -30,7 +30,7 @@ if (!(Test-Path (Join-Path $Jre "bin\java.exe"))) {
   Move-Item $JreHome.FullName $Jre
 }
 
-# 清理旧构建产物，避免正在开发时重复打包混入旧文件。
+# Clean previous build outputs before packaging.
 Remove-Item (Join-Path $Root "build") -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Root "dist") -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Root "DocContentSearch.spec") -Force -ErrorAction SilentlyContinue
@@ -42,8 +42,48 @@ Remove-Item $DistZip -Force -ErrorAction SilentlyContinue
   --windowed `
   --name DocContentSearch `
   --icon "$Icon" `
+  --exclude-module PySide6.QtQml `
+  --exclude-module PySide6.QtQuick `
+  --exclude-module PySide6.QtQuickWidgets `
+  --exclude-module PySide6.QtPdf `
+  --exclude-module PySide6.QtPdfWidgets `
+  --exclude-module PySide6.QtOpenGL `
+  --exclude-module PySide6.QtOpenGLWidgets `
+  --exclude-module PySide6.QtWebEngineCore `
+  --exclude-module PySide6.QtWebEngineWidgets `
   --add-data "$Vendor;vendor" `
   --add-data "$Assets;assets" `
   "run.py"
+if ($LASTEXITCODE -ne 0) {
+  throw "Build failed. Please exit DocContentSearch from tray and retry."
+}
 
-Write-Host "打包完成：$Root\dist\DocContentSearch\DocContentSearch.exe"
+# PyInstaller's PySide6 hook can collect unused Qt modules; keep only the current Widgets UI runtime.
+$Internal = Join-Path $Root "dist\DocContentSearch\_internal"
+$PySide = Join-Path $Internal "PySide6"
+$UnusedQtFiles = @(
+  "opengl32sw.dll",
+  "Qt6Qml.dll",
+  "Qt6QmlMeta.dll",
+  "Qt6QmlModels.dll",
+  "Qt6QmlWorkerScript.dll",
+  "Qt6Quick.dll",
+  "Qt6Pdf.dll",
+  "Qt6OpenGL.dll",
+  "Qt6VirtualKeyboard.dll",
+  "QtQml.pyd",
+  "QtQuick.pyd",
+  "QtQuickWidgets.pyd",
+  "QtPdf.pyd",
+  "QtPdfWidgets.pyd",
+  "QtOpenGL.pyd",
+  "QtOpenGLWidgets.pyd"
+)
+foreach ($Name in $UnusedQtFiles) {
+  Remove-Item (Join-Path $PySide $Name) -Force -ErrorAction SilentlyContinue
+}
+foreach ($Name in @("translations", "qml")) {
+  Remove-Item (Join-Path $PySide $Name) -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host "Build complete: $Root\dist\DocContentSearch\DocContentSearch.exe"
